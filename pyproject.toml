@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wht-forecast"
+version = "0.1.0"
+description = "Walsh-Hadamard Transform for time series forecasting"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Research Author"}
+]
+keywords = ["time-series", "forecasting", "walsh-hadamard", "signal-processing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "numpy>=1.24.0",
+    "matplotlib>=3.7.0",
+    "pandas>=2.0.0",
+]
+
+[project.optional-dependencies]
+all = [
+    "pandas>=2.0.0",
+]
+
+[project.scripts]
+wht-forecast = "wht_forecast.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
