@@ -30,6 +30,9 @@ dependencies = [
 all = [
     "pandas>=2.0.0",
 ]
+dev = [
+    "python-docx>=1.0.0",
+]
 
 [project.scripts]
 wht-forecast = "wht_forecast.cli:main"

@@ -1,5 +1,5 @@
 """
-Full experiment orchestration: data, forecasting, baselines, metrics, visualization.
+Full experiment orchestration: data, forecasting, metrics, visualization.
 """
 
 from pathlib import Path
@@ -7,11 +7,6 @@ from typing import Dict, Literal, Optional
 
 import numpy as np
 
-from wht_forecast.baselines import (
-    linear_extrapolation_forecast,
-    moving_average_forecast,
-    naive_forecast,
-)
 from wht_forecast.data_loader import (
     load_time_series_from_csv,
     normalize_series,
@@ -25,9 +20,9 @@ from wht_forecast.synthetic_data import generate_synthetic_series
 from wht_forecast.trace_log import log_trace
 from wht_forecast.transform import wht_forward, wht_inverse
 from wht_forecast.visualization import (
-    plot_method_comparison,
     plot_results,
     plot_topk_analysis,
+    plot_wht_vs_actual,
 )
 
 
@@ -144,52 +139,34 @@ def run_experiment(
         trace=trace_pipeline,
     )
 
-    forecast_naive = naive_forecast(train_series, block_size)
-    forecast_ma = moving_average_forecast(train_series, block_size, window=3)
-    forecast_linear = linear_extrapolation_forecast(train_series, block_size)
+    metrics_wht = compute_metrics(actual_next, forecast_wht)
 
     if trace_pipeline:
         log_trace(
             trace_pipeline,
             pipeline="EXP",
-            title="Baseline forecasts (L2 norms)",
+            title="Holdout forecast (L2 norms)",
             detail=(
                 f"actual={float(np.linalg.norm(actual_next)):.6g}, "
-                f"wht={float(np.linalg.norm(forecast_wht)):.6g}, "
-                f"naive={float(np.linalg.norm(forecast_naive)):.6g}, "
-                f"moving_avg={float(np.linalg.norm(forecast_ma)):.6g}, "
-                f"linear={float(np.linalg.norm(forecast_linear)):.6g}"
+                f"wht={float(np.linalg.norm(forecast_wht)):.6g}"
             ),
         )
 
-    metrics_wht = compute_metrics(actual_next, forecast_wht)
-    metrics_naive = compute_metrics(actual_next, forecast_naive)
-    metrics_ma = compute_metrics(actual_next, forecast_ma)
-    metrics_linear = compute_metrics(actual_next, forecast_linear)
-
     if trace_pipeline:
         log_trace(
             trace_pipeline,
             pipeline="EXP",
-            title="Holdout metrics summary",
+            title="Holdout metrics (WHT)",
             detail=(
-                f"wht MAE={metrics_wht['MAE']:.6g} RMSE={metrics_wht['RMSE']:.6g}; "
-                f"naive MAE={metrics_naive['MAE']:.6g}; "
-                f"moving_avg MAE={metrics_ma['MAE']:.6g}; "
-                f"linear MAE={metrics_linear['MAE']:.6g}"
+                f"MAE={metrics_wht['MAE']:.6g} RMSE={metrics_wht['RMSE']:.6g} "
+                f"MAPE={metrics_wht['MAPE']:.6g}"
             ),
         )
 
     results: Dict[str, object] = {
         "forecast_wht": forecast_wht,
-        "forecast_naive": forecast_naive,
-        "forecast_ma": forecast_ma,
-        "forecast_linear": forecast_linear,
         "actual_next": actual_next,
         "metrics_wht": metrics_wht,
-        "metrics_naive": metrics_naive,
-        "metrics_ma": metrics_ma,
-        "metrics_linear": metrics_linear,
         "info": info,
         "series": series,
         "train_series": train_series,
@@ -212,30 +189,23 @@ def run_experiment(
             topk_values=[2, 4, 6, 8, 12, 16],
             save_path=str(output_dir / "topk_analysis.png"),
         )
-        plot_method_comparison(
+        plot_wht_vs_actual(
             actual_next,
             forecast_wht,
-            forecast_naive,
-            forecast_ma,
-            forecast_linear,
-            save_path=str(output_dir / "method_comparison.png"),
+            save_path=str(output_dir / "wht_vs_actual.png"),
         )
 
     return results
 
 
 def print_metrics_table(results: Dict[str, object]) -> None:
-    """Print formatted metrics table to stdout."""
-    methods = [
-        ("WHT (proposed)", results["metrics_wht"]),
-        ("Naive", results["metrics_naive"]),
-        ("Moving average", results["metrics_ma"]),
-        ("Linear extrapolation", results["metrics_linear"]),
-    ]
+    """Print formatted WHT holdout metrics to stdout."""
+    m = results["metrics_wht"]
     print(f"{'Method':<25} {'MAE':>8} {'RMSE':>8} {'MAPE%':>8}")
     print("-" * 50)
-    for name, m in methods:
-        print(f"{name:<25} {m['MAE']:8.4f} {m['RMSE']:8.4f} {m['MAPE']:8.2f}")
+    print(
+        f"{'WHT (proposed)':<25} {m['MAE']:8.4f} {m['RMSE']:8.4f} {m['MAPE']:8.2f}"
+    )
     print("=" * 50)
 
 

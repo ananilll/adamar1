@@ -125,7 +125,7 @@ def main() -> None:
         print(f"\nPlots saved to: {args.output_dir}")
         print("  - forecast.png")
         print("  - topk_analysis.png")
-        print("  - method_comparison.png")
+        print("  - wht_vs_actual.png")
         print("\nDone.")
     else:
         parser.print_help()

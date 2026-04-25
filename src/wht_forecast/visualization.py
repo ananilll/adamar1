@@ -175,16 +175,13 @@ def plot_topk_analysis(
     plt.close()
 
 
-def plot_method_comparison(
+def plot_wht_vs_actual(
     actual_next: np.ndarray,
     forecast_wht: np.ndarray,
-    forecast_naive: np.ndarray,
-    forecast_ma: np.ndarray,
-    forecast_linear: np.ndarray,
     save_path: Optional[str] = None,
 ) -> None:
     """
-    Compare WHT forecast with baseline methods.
+    Plot WHT holdout forecast against the actual next block and WHT error bars.
 
     Parameters
     ----------
@@ -192,49 +189,41 @@ def plot_method_comparison(
         Actual next block.
     forecast_wht : np.ndarray
         WHT forecast.
-    forecast_naive : np.ndarray
-        Naive forecast.
-    forecast_ma : np.ndarray
-        Moving average forecast.
-    forecast_linear : np.ndarray
-        Linear extrapolation forecast.
     save_path : Optional[str]
         Path to save figure.
     """
     block_size = len(actual_next)
     t = np.arange(block_size)
-
-    methods: Dict[str, tuple] = {
-        "WHT (proposed)": (forecast_wht, "crimson", "-", 2.5),
-        "Naive": (forecast_naive, "steelblue", "--", 1.5),
-        "Moving average": (forecast_ma, "orange", "-.", 1.5),
-        "Linear extrapolation": (forecast_linear, "green", ":", 1.5),
-    }
+    m = compute_metrics(actual_next, forecast_wht)
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     ax1 = axes[0]
     ax1.plot(t, actual_next, color="black", linewidth=2.5, label="Actual", zorder=5)
-    for name, (fc, color, ls, lw) in methods.items():
-        ax1.plot(t, fc, color=color, linestyle=ls, linewidth=lw, label=name, alpha=0.85)
-    ax1.set_title("Method Comparison")
+    ax1.plot(
+        t,
+        forecast_wht,
+        color="crimson",
+        linewidth=2.5,
+        linestyle="--",
+        label="WHT (proposed)",
+        alpha=0.9,
+    )
+    ax1.set_title("Holdout: actual vs WHT forecast")
     ax1.set_xlabel("Position in block")
     ax1.set_ylabel("Value")
     ax1.legend(fontsize=8)
     ax1.grid(True, alpha=0.3)
 
     ax2 = axes[1]
-    names = list(methods.keys())
-    rmse_vals = [compute_metrics(actual_next, fc)["RMSE"] for (fc, *_) in methods.values()]
-    mae_vals = [compute_metrics(actual_next, fc)["MAE"] for (fc, *_) in methods.values()]
-    x = np.arange(len(names))
-    ax2.bar(x - 0.2, rmse_vals, 0.4, label="RMSE", color="crimson", alpha=0.8)
-    ax2.bar(x + 0.2, mae_vals, 0.4, label="MAE", color="steelblue", alpha=0.8)
-    ax2.set_xticks(x)
-    ax2.set_xticklabels(names, rotation=20, ha="right", fontsize=8)
-    ax2.set_title("Error Metrics by Method")
+    ax2.bar(
+        ["RMSE", "MAE"],
+        [m["RMSE"], m["MAE"]],
+        color=["crimson", "steelblue"],
+        alpha=0.85,
+    )
+    ax2.set_title("WHT holdout errors")
     ax2.set_ylabel("Error")
-    ax2.legend()
     ax2.grid(True, alpha=0.3, axis="y")
 
     plt.tight_layout()

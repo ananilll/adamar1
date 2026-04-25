@@ -110,4 +110,4 @@ if __name__ == "__main__":
     print(f"\nPlots saved to: {output_dir}")
     print("  - forecast.png")
     print("  - topk_analysis.png")
-    print("  - method_comparison.png")
+        print("  - wht_vs_actual.png")
