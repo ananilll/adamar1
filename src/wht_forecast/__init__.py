@@ -6,7 +6,7 @@ A research-grade implementation for scientific use.
 
 from wht_forecast.hadamard import build_hadamard_matrix, build_normalized_hadamard
 from wht_forecast.transform import wht_forward, wht_inverse
-from wht_forecast.blocks import split_into_blocks
+from wht_forecast.blocks import pad_series_to_blocks, split_into_blocks
 from wht_forecast.filtering import select_top_coefficients, compute_energy
 from wht_forecast.forecasting import forecast_next_block
 from wht_forecast.metrics import compute_metrics
@@ -27,6 +27,7 @@ __all__ = [
     "build_normalized_hadamard",
     "wht_forward",
     "wht_inverse",
+    "pad_series_to_blocks",
     "split_into_blocks",
     "select_top_coefficients",
     "compute_energy",

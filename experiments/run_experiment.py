@@ -84,6 +84,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Suppress pipeline traces (traces are on by default; see NO_COLOR / FORCE_COLOR)",
     )
+    parser.add_argument(
+        "--no-pad-remainder",
+        action="store_true",
+        help="Do not zero-pad to full blocks; drop incomplete tail (legacy).",
+    )
 
     args = parser.parse_args()
     output_dir = args.output_dir or (_project_root / "outputs")
@@ -101,6 +106,7 @@ if __name__ == "__main__":
         value_column=args.value_column,
         normalize=args.normalize,
         trace_pipeline=not args.quiet,
+        pad_remainder=not args.no_pad_remainder,
     )
 
     print("\n" + "=" * 50)
@@ -110,4 +116,4 @@ if __name__ == "__main__":
     print(f"\nPlots saved to: {output_dir}")
     print("  - forecast.png")
     print("  - topk_analysis.png")
-        print("  - wht_vs_actual.png")
+    print("  - wht_vs_actual.png")

@@ -12,6 +12,7 @@ from wht_forecast.data_loader import (
     normalize_series,
     validate_series_for_forecasting,
 )
+from wht_forecast.blocks import pad_series_to_blocks
 from wht_forecast.filtering import select_top_coefficients
 from wht_forecast.forecasting import forecast_next_block
 from wht_forecast.hadamard import build_hadamard_matrix, build_normalized_hadamard
@@ -38,6 +39,7 @@ def run_experiment(
     value_column: Optional[str] = None,
     normalize: Literal["zscore", "minmax", "none"] = "none",
     trace_pipeline: bool = True,
+    pad_remainder: bool = True,
 ) -> Dict[str, object]:
     """
     Run full WHT forecasting experiment.
@@ -67,11 +69,17 @@ def run_experiment(
     trace_pipeline : bool
         If True (default), print experiment stages and WHT step-by-step trace to stdout.
         Set False for quiet runs (matches ``forecast_next_block(..., trace=False)``).
+    pad_remainder : bool
+        If True (default), append zeros after normalization so the series length is a
+        multiple of ``block_size``. Holdout metrics use only non-padded positions in the
+        last block when padding was applied.
 
     Returns
     -------
     Dict[str, object]
-        Results dict with forecasts, metrics, info.
+        Forecasts, ``metrics_wht``, ``info``, ``series``, ``train_series``,
+        ``remainder_pad`` (zeros appended), and ``holdout_metric_len`` (prefix length
+        used for metrics when the last block includes padding).
     """
     output_dir = output_dir or Path(".")
     output_dir = Path(output_dir)
@@ -113,6 +121,20 @@ def run_experiment(
             ),
         )
 
+    remainder_pad = 0
+    if pad_remainder:
+        series, remainder_pad = pad_series_to_blocks(series, block_size, pad_value=0.0)
+        if trace_pipeline and remainder_pad > 0:
+            log_trace(
+                trace_pipeline,
+                pipeline="EXP",
+                title="Remainder padding",
+                detail=(
+                    f"appended {remainder_pad} zeros; n={series.size}, "
+                    f"block_size={block_size}"
+                ),
+            )
+
     A = build_normalized_hadamard(block_size)
 
     n_blocks = len(series) // block_size
@@ -139,7 +161,21 @@ def run_experiment(
         trace=trace_pipeline,
     )
 
-    metrics_wht = compute_metrics(actual_next, forecast_wht)
+    holdout_metric_len = block_size - remainder_pad if remainder_pad else block_size
+    actual_for_metrics = actual_next[:holdout_metric_len]
+    forecast_for_metrics = forecast_wht[:holdout_metric_len]
+    metrics_wht = compute_metrics(actual_for_metrics, forecast_for_metrics)
+
+    if trace_pipeline:
+        log_trace(
+            trace_pipeline,
+            pipeline="EXP",
+            title="Holdout metrics slice",
+            detail=(
+                f"holdout_metric_len={holdout_metric_len} (full block={block_size}, "
+                f"remainder_pad={remainder_pad})"
+            ),
+        )
 
     if trace_pipeline:
         log_trace(
@@ -170,6 +206,8 @@ def run_experiment(
         "info": info,
         "series": series,
         "train_series": train_series,
+        "remainder_pad": remainder_pad,
+        "holdout_metric_len": holdout_metric_len,
     }
 
     if output_dir:

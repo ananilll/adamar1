@@ -189,6 +189,9 @@ python -m wht_forecast.cli run-experiment --csv data.csv --value-column sales
 
 # With preprocessing (z-score or min-max normalization)
 python -m wht_forecast.cli run-experiment --csv data.csv --normalize zscore
+
+# Ignore incomplete tail at end of series (no zero-padding)
+python -m wht_forecast.cli run-experiment --csv data.csv --no-pad-remainder
 ```
 
 ### Python API
@@ -213,6 +216,7 @@ forecast, info = forecast_next_block(series, block_size=32, top_k=8)
 - **European format**: `"19403,9"` and `"19 403,9"` (comma decimal, space thousands)
 - **Date sorting**: If Date column exists, parses and sorts chronologically
 - **Validation**: Loader requires at least **64** values; `run_experiment` with default `block_size=32` further requires **3 full blocks** (96 points) for train/holdout split—use a longer series or a smaller `--block-size`
+- **Remainder padding (default)**: After optional normalization, `run_experiment` appends zeros so the series length is an exact multiple of `block_size`, so no real samples are dropped at the end (e.g. 250 points → 6 zeros for block size 32). Holdout **metrics** (MAE, RMSE, MAPE) are computed only on the real portion of the last block, not on padded positions. Plots still show the full last block (including zeros). Use CLI flag `--no-pad-remainder` for the previous behavior (incomplete tail ignored). For direct use of `forecast_next_block`, call `pad_series_to_blocks` yourself if you need the same alignment.
 - **Compatible with**: Yahoo Finance, MetaTrader, TradingView, generic CSV
 
 ### Example Data
@@ -237,7 +241,7 @@ The project follows a modular design with clear separation of concerns:
 |--------|----------------|
 | `hadamard.py` | Pure math: Walsh-Hadamard matrix construction (H, A) |
 | `transform.py` | Forward/inverse WHT (C = A@X, X = A.T@C) |
-| `blocks.py` | Time series splitting into non-overlapping blocks |
+| `blocks.py` | Time series splitting; `pad_series_to_blocks` aligns length to full blocks |
 | `filtering.py` | Top-k coefficient selection by energy |
 | `forecasting.py` | Full pipeline: blocks → WHT → top-k → deltas → smooth → forecast |
 | `metrics.py` | MAE, MSE, RMSE, MAPE |

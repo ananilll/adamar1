@@ -87,6 +87,14 @@ def main() -> None:
             "NO_COLOR disables ANSI; FORCE_COLOR=1 forces colors when not a TTY."
         ),
     )
+    run_parser.add_argument(
+        "--no-pad-remainder",
+        action="store_true",
+        help=(
+            "Do not zero-pad the series to a multiple of block size; "
+            "incomplete tail is ignored (legacy behavior)."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -118,6 +126,7 @@ def main() -> None:
             value_column=args.value_column,
             normalize=args.normalize,
             trace_pipeline=not args.quiet,
+            pad_remainder=not args.no_pad_remainder,
         )
 
         print("\nMetrics:")
