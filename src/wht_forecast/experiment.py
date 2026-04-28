@@ -5,6 +5,8 @@ Full experiment orchestration: data, forecasting, metrics, visualization.
 from pathlib import Path
 from typing import Dict, Literal, Optional
 
+RemainderPadMode = Literal["repeat_last", "zeros"]
+
 import numpy as np
 
 from wht_forecast.data_loader import (
@@ -40,6 +42,7 @@ def run_experiment(
     normalize: Literal["zscore", "minmax", "none"] = "none",
     trace_pipeline: bool = True,
     pad_remainder: bool = True,
+    remainder_pad_mode: RemainderPadMode = "repeat_last",
 ) -> Dict[str, object]:
     """
     Run full WHT forecasting experiment.
@@ -70,16 +73,20 @@ def run_experiment(
         If True (default), print experiment stages and WHT step-by-step trace to stdout.
         Set False for quiet runs (matches ``forecast_next_block(..., trace=False)``).
     pad_remainder : bool
-        If True (default), append zeros after normalization so the series length is a
+        If True (default), extend the series after normalization so its length is a
         multiple of ``block_size``. Holdout metrics use only non-padded positions in the
         last block when padding was applied.
+    remainder_pad_mode : {"repeat_last", "zeros"}
+        How to fill the tail when ``pad_remainder`` is True: repeat the last value
+        (default) or append zeros.
 
     Returns
     -------
     Dict[str, object]
         Forecasts, ``metrics_wht``, ``info``, ``series``, ``train_series``,
-        ``remainder_pad`` (zeros appended), and ``holdout_metric_len`` (prefix length
-        used for metrics when the last block includes padding).
+        ``remainder_pad`` (number of synthetic samples appended), ``remainder_pad_mode``,
+        and ``holdout_metric_len`` (prefix length used for metrics when the last block
+        includes padding).
     """
     output_dir = output_dir or Path(".")
     output_dir = Path(output_dir)
@@ -123,15 +130,17 @@ def run_experiment(
 
     remainder_pad = 0
     if pad_remainder:
-        series, remainder_pad = pad_series_to_blocks(series, block_size, pad_value=0.0)
+        series, remainder_pad = pad_series_to_blocks(
+            series, block_size, pad_mode=remainder_pad_mode
+        )
         if trace_pipeline and remainder_pad > 0:
             log_trace(
                 trace_pipeline,
                 pipeline="EXP",
                 title="Remainder padding",
                 detail=(
-                    f"appended {remainder_pad} zeros; n={series.size}, "
-                    f"block_size={block_size}"
+                    f"appended {remainder_pad} samples (mode={remainder_pad_mode}); "
+                    f"n={series.size}, block_size={block_size}"
                 ),
             )
 
@@ -207,6 +216,7 @@ def run_experiment(
         "series": series,
         "train_series": train_series,
         "remainder_pad": remainder_pad,
+        "remainder_pad_mode": remainder_pad_mode,
         "holdout_metric_len": holdout_metric_len,
     }
 

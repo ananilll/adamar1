@@ -190,8 +190,11 @@ python -m wht_forecast.cli run-experiment --csv data.csv --value-column sales
 # With preprocessing (z-score or min-max normalization)
 python -m wht_forecast.cli run-experiment --csv data.csv --normalize zscore
 
-# Ignore incomplete tail at end of series (no zero-padding)
+# Ignore incomplete tail at end of series (no padding)
 python -m wht_forecast.cli run-experiment --csv data.csv --no-pad-remainder
+
+# Pad incomplete tail with zeros instead of repeating the last value
+python -m wht_forecast.cli run-experiment --csv data.csv --remainder-pad zeros
 ```
 
 ### Python API
@@ -216,7 +219,7 @@ forecast, info = forecast_next_block(series, block_size=32, top_k=8)
 - **European format**: `"19403,9"` and `"19 403,9"` (comma decimal, space thousands)
 - **Date sorting**: If Date column exists, parses and sorts chronologically
 - **Validation**: Loader requires at least **64** values; `run_experiment` with default `block_size=32` further requires **3 full blocks** (96 points) for train/holdout split—use a longer series or a smaller `--block-size`
-- **Remainder padding (default)**: After optional normalization, `run_experiment` appends zeros so the series length is an exact multiple of `block_size`, so no real samples are dropped at the end (e.g. 250 points → 6 zeros for block size 32). Holdout **metrics** (MAE, RMSE, MAPE) are computed only on the real portion of the last block, not on padded positions. Plots still show the full last block (including zeros). Use CLI flag `--no-pad-remainder` for the previous behavior (incomplete tail ignored). For direct use of `forecast_next_block`, call `pad_series_to_blocks` yourself if you need the same alignment.
+- **Remainder padding (default)**: After optional normalization, `run_experiment` extends the series so its length is an exact multiple of `block_size`, so no real samples are dropped at the end. By default the tail is filled by **repeating the last value** (constant hold); use `--remainder-pad zeros` for zero-fill. Example: 250 points and block size 32 → 6 synthetic samples appended. Holdout **metrics** (MAE, RMSE, MAPE) are computed only on the real portion of the last block, not on padded positions. Plots still show the full last block (including synthetic tail). Use `--no-pad-remainder` to drop the incomplete tail (legacy). For direct use of `forecast_next_block`, call `pad_series_to_blocks(..., pad_mode=...)` if you need the same alignment.
 - **Compatible with**: Yahoo Finance, MetaTrader, TradingView, generic CSV
 
 ### Example Data

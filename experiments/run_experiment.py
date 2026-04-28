@@ -87,7 +87,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--no-pad-remainder",
         action="store_true",
-        help="Do not zero-pad to full blocks; drop incomplete tail (legacy).",
+        help="Do not pad to full blocks; drop incomplete tail (legacy).",
+    )
+    parser.add_argument(
+        "--remainder-pad",
+        type=str,
+        choices=["repeat_last", "zeros"],
+        default="repeat_last",
+        help="Tail padding: repeat_last (default) or zeros",
     )
 
     args = parser.parse_args()
@@ -107,6 +114,7 @@ if __name__ == "__main__":
         normalize=args.normalize,
         trace_pipeline=not args.quiet,
         pad_remainder=not args.no_pad_remainder,
+        remainder_pad_mode=args.remainder_pad,
     )
 
     print("\n" + "=" * 50)

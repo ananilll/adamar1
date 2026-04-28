@@ -91,8 +91,19 @@ def main() -> None:
         "--no-pad-remainder",
         action="store_true",
         help=(
-            "Do not zero-pad the series to a multiple of block size; "
+            "Do not pad the series to a multiple of block size; "
             "incomplete tail is ignored (legacy behavior)."
+        ),
+    )
+    run_parser.add_argument(
+        "--remainder-pad",
+        type=str,
+        choices=["repeat_last", "zeros"],
+        default="repeat_last",
+        metavar="MODE",
+        help=(
+            "When padding incomplete tail: repeat_last (default) or zeros "
+            "(ignored with --no-pad-remainder)."
         ),
     )
 
@@ -112,6 +123,8 @@ def main() -> None:
             print(f"Data source: synthetic (length={args.series_length}, noise={args.noise})")
         if args.normalize != "none":
             print(f"Normalization: {args.normalize}")
+        if not args.no_pad_remainder:
+            print(f"Remainder pad: {args.remainder_pad}")
         print()
 
         results = run_experiment(
@@ -127,6 +140,7 @@ def main() -> None:
             normalize=args.normalize,
             trace_pipeline=not args.quiet,
             pad_remainder=not args.no_pad_remainder,
+            remainder_pad_mode=args.remainder_pad,
         )
 
         print("\nMetrics:")

@@ -2,7 +2,7 @@
 Time series block splitting utilities.
 """
 
-from typing import List, Tuple
+from typing import List, Literal, Tuple
 
 import numpy as np
 
@@ -10,7 +10,7 @@ import numpy as np
 def pad_series_to_blocks(
     series: np.ndarray,
     block_size: int,
-    pad_value: float = 0.0,
+    pad_mode: Literal["repeat_last", "zeros"] = "repeat_last",
 ) -> Tuple[np.ndarray, int]:
     """
     Append samples so the series length is an exact multiple of ``block_size``.
@@ -23,8 +23,9 @@ def pad_series_to_blocks(
         Input time series (1D).
     block_size : int
         Target block length.
-    pad_value : float
-        Value used for appended samples (default: 0.0).
+    pad_mode : {"repeat_last", "zeros"}
+        ``repeat_last`` (default): fill with the last series value (constant hold).
+        ``zeros``: fill with 0.0.
 
     Returns
     -------
@@ -38,7 +39,11 @@ def pad_series_to_blocks(
     if r == 0:
         return x.copy(), 0
     n_pad = block_size - r
-    tail = np.full(n_pad, pad_value, dtype=np.float64)
+    if pad_mode == "repeat_last":
+        fill = float(x[-1])
+    else:
+        fill = 0.0
+    tail = np.full(n_pad, fill, dtype=np.float64)
     return np.concatenate([x, tail]), n_pad
 
 
